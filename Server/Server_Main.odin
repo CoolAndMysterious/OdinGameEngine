@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "vendor:ENet"
+import net "Network"
 
 
 main :: proc() {
@@ -32,6 +33,18 @@ main :: proc() {
 
     fmt.println("Server running on port 7777")
 
+
+    manager_address := ENet.Address{port = 9000,}
+
+    //ENet.address_set_host(&address, "LOCALHOST")
+    ENet.address_set_host_ip(&manager_address, "127.0.0.1")
+    manager := ENet.host_connect(server, &manager_address, 1, 0, /* here goes the peer, channel i think. i might be wrong.*/)
+
+    if manager == nil {
+        fmt.println("Failed to connect")
+        return
+    }
+
     for {
         event: ENet.Event
 
@@ -56,6 +69,8 @@ main :: proc() {
                 )
 
                 ENet.peer_send(event.peer, 0, packet)
+
+                net.send_server_register(manager, 1)
 
             case .RECEIVE:
                 message := string(event.packet.data[:event.packet.dataLength])
