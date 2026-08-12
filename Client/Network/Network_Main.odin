@@ -43,10 +43,9 @@ network_update :: proc() {
 
     fmt.println("Tryna Connecting...")
 
-
+    
+    event: ENet.Event
     for {
-        event: ENet.Event
-
         if ENet.host_service(client, &event, 100) > 0 {
 
             switch event.type {

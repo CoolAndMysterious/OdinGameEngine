@@ -45,9 +45,9 @@ main :: proc() {
         return
     }
 
-    for {
-        event: ENet.Event
 
+    event: ENet.Event
+    for {
         if ENet.host_service(server, &event, 1000) <= 0 {
             continue
         }
