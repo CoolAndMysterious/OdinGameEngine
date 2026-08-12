@@ -26,9 +26,9 @@ main :: proc() {
 
     servers: [dynamic]^ENet.Peer
 
-    for {
-        event: ENet.Event
 
+    event: ENet.Event
+    for {
         if ENet.host_service(manager, &event, 1000) <= 0 {
             continue
         }
