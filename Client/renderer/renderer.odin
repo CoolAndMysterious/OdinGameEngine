@@ -4,12 +4,6 @@ package renderer
 import "core:fmt"
 import rl "vendor:raylib"
 import physics "../Physics"
-import b3 "vendor:box3d"
-
-
-add :: proc(a:int, b:int) -> int{
-    return a + b
-}
 
 
 camera := rl.Camera3D{

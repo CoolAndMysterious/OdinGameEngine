@@ -10,14 +10,8 @@ import "core:thread"
 import physics "Physics"
 
 main :: proc() {
-    fmt.println("Hello, World!")
 
-    addition := r.add(20, 10)
-    fmt.print(addition)
-
-    fmt.print("hi?")
-
-    fmt.println("Hello, World!")
+    fmt.print("Starting Game Client")
 
     rl.InitWindow(1280, 720, "RayLib Engine")
     rl.DisableCursor()
