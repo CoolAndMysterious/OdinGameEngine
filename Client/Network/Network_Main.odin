@@ -2,6 +2,7 @@ package Network
 
 import "core:fmt"
 import "vendor:ENet"
+import ecs "../ECS"
 
 network_update :: proc() {
 
@@ -55,6 +56,10 @@ network_update :: proc() {
 
             case .RECEIVE:
                 fmt.println("Received packet!")
+
+                packet := event.packet
+
+                data := cast(^ecs.EntityPacket)event.packet.data
 
                 ENet.packet_destroy(event.packet)
 

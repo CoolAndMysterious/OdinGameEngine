@@ -8,6 +8,9 @@ import b3 "vendor:box3d"
 import net "Network"
 import "core:thread"
 import physics "Physics"
+import Flecs "../Shared/Flecs"
+import ecs "ECS"
+import "core:os"
 
 main :: proc() {
 
@@ -17,12 +20,23 @@ main :: proc() {
     rl.DisableCursor()
     defer rl.CloseWindow()
 
-    world := physics.CreateWorld()
-    defer physics.DestroyWorld(world)
-    fmt.print(world.index1)
+    world := Flecs.ecs_init()
+    defer Flecs.ecs_fini(world)
+    registry := ecs.ECS_Registry{
+        components = ecs.Register_ECS_Components(world),
+        tags       = ecs.Register_ECS_Tags(world)
+    }
+
+    //Flecs.ecs_world_from_json_file( world, "saves/world.json", nil)
+    player := ecs.Create_Player(world, registry, 1)
+    ecs.Save_World(world)
+
+    phys_world := physics.CreateWorld()
+    defer physics.DestroyWorld(phys_world)
+    fmt.print(phys_world.index1)
 
 
-    cube := physics.CreateCube(world,{0, 5, 0},1.0,rl.RED,)
+    cube := physics.CreateCube(phys_world,{0, 5, 0},1.0,rl.RED,)
 
     thread.create_and_start(net.network_update)
 
@@ -31,6 +45,9 @@ main :: proc() {
 
     physics_dt: f32 = 1.0 / 60.0
     accumulator: f32 = 0.0
+
+
+    
 
     for !rl.WindowShouldClose(){
 
@@ -46,7 +63,7 @@ main :: proc() {
 
         for accumulator >= physics_dt {
             b3.World_Step(
-                world,
+                phys_world,
                 physics_dt,
                 4,
             )
