@@ -20,6 +20,7 @@ main :: proc() {
     rl.DisableCursor()
     defer rl.CloseWindow()
 
+    //ECS Ini
     world := Flecs.ecs_init()
     defer Flecs.ecs_fini(world)
     registry := ecs.ECS_Registry{
@@ -31,12 +32,13 @@ main :: proc() {
     player := ecs.Create_Player(world, registry, 1)
     ecs.Save_World(world)
 
-    phys_world := physics.CreateWorld()
-    defer physics.DestroyWorld(phys_world)
-    fmt.print(phys_world.index1)
+    //Box3D PhysWorld Ini
+    physics_world := physics.CreateWorld()
+    defer physics.DestroyWorld(physics_world)
+    fmt.print(physics_world.index1)
 
 
-    cube := physics.CreateCube(phys_world,{0, 5, 0},1.0,rl.RED,)
+    cube := physics.CreateCube(physics_world,{0, 5, 0},1.0,rl.RED,)
 
     thread.create_and_start(net.network_update)
 
@@ -63,7 +65,7 @@ main :: proc() {
 
         for accumulator >= physics_dt {
             b3.World_Step(
-                phys_world,
+                physics_world,
                 physics_dt,
                 4,
             )

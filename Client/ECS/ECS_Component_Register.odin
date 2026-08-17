@@ -1,14 +1,80 @@
 package ECS
 
 import Flecs "../../Shared/Flecs"
-import "core:fmt"
+import "vendor:box3d"
+import rl "vendor:raylib"
+
+
+Position :: struct {
+    x, y, z: f32,
+}
+
+Rotation :: struct {
+    x, y, z, w: f32,
+}
+
+Velocity :: struct {
+    x, y, z: f32,
+}
+
+EntityType :: enum u8 {
+    Object,
+    AI,
+    Human,
+    Player,
+}
+Input :: struct{
+    inputs : u32
+}
+
+Player_ID:: struct {
+    player_id : u32
+}
+InputHistory :: struct {
+    player_id:  []Player_ID,
+
+    inputs:     []Input,
+    positions:  []Position,
+    rotations:  []Rotation,
+    velocities: []Velocity,
+}
+
+Physics_Body :: struct {
+    body: box3d.BodyId,
+}
+
+Render_Model :: struct {
+    model: rl.Model,
+}
+
+Model_Asset :: struct {
+    path: string,
+}
+
+
+Vec3 :: struct { x, y, z: f32, }
+Vec2 :: struct { x, y: f32, }
+Geometry :: struct {
+    vertices: [dynamic]Vec3,
+    indices:  [dynamic]u32,
+
+    normals:  [dynamic]Vec3,
+    uvs:      [dynamic]Vec2,
+}
+
 
 ECS_Components :: struct {
-    position: Flecs.ecs_entity_t,
-    rotation: Flecs.ecs_entity_t,
-    velocity: Flecs.ecs_entity_t,
-    input: Flecs.ecs_entity_t,
-    player_id: Flecs.ecs_entity_t,
+    position:       Flecs.ecs_entity_t,
+    rotation:       Flecs.ecs_entity_t,
+    velocity:       Flecs.ecs_entity_t,
+    input:          Flecs.ecs_entity_t,
+    player_id:      Flecs.ecs_entity_t,
+    model_asset:    Flecs.ecs_entity_t,
+    Geometry:       Flecs.ecs_entity_t,
+
+    //runtime
+    physics_body: Flecs.ecs_entity_t,
+    render_model: Flecs.ecs_entity_t,
 }
 
 ECS_Tags :: struct {
