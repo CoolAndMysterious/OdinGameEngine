@@ -1,6 +1,6 @@
 package ECS
 
-import ecs "../../Imported_Vendors/odecs/src"
+import ecs "../odecs/src"
 
 
 World :: ecs.World
