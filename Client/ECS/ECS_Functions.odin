@@ -1,25 +1,84 @@
 package ECS
 
-create_entity :: proc(world: ^World, tags: ..Tag) -> Entity {
+
+create_world :: proc(initial_capacity: int = 1024) -> World {
+    assert(initial_capacity >= 0, "Invalid initial entity capacity")
+
+    world := World{}
+
+    world.entity_capacity = initial_capacity
+
+    resize(&world.entity_state, initial_capacity)
+    resize(&world.tags, initial_capacity)
+
+    resize(&world.positions, initial_capacity)
+    resize(&world.rotations, initial_capacity)
+    resize(&world.velocities, initial_capacity)
+
+    return world
+}
+
+destroy_world :: proc(world: ^World) {
+    delete(world.entity_state)
+    delete(world.free_entities)
+
+    delete(world.tags)
+
+    delete(world.positions)
+    delete(world.rotations)
+    delete(world.velocities)
+}
+
+
+grow_entity_storage :: proc(world: ^World) {
+    old_capacity := world.entity_capacity
+
+    new_capacity: int
+
+    if old_capacity == 0 {
+        new_capacity = 1024
+    } else {
+        new_capacity = old_capacity * 2
+    }
+
+    resize(&world.entity_state, new_capacity)
+    resize(&world.tags, new_capacity)
+
+    resize(&world.positions, new_capacity)
+    resize(&world.rotations, new_capacity)
+    resize(&world.velocities, new_capacity)
+
+    world.entity_capacity = new_capacity
+}
+
+create_entity :: proc(world: ^World) -> Entity {
     entity: Entity
 
-    // Reuse a previously destroyed entity ID first.
+    // Reuse a destroyed entity ID first.
     if len(world.free_entities) > 0 {
         entity = pop(&world.free_entities)
 
-        world.entity_state[int(entity)] = Entity_State.Alive
-    } else {
-        // Create a completely new entity ID.
-        entity = world.next_entity
-        world.next_entity += 1
+        id := int(entity)
 
-        append(&world.entity_state, Entity_State.Alive)
+        world.entity_state[id] = .Alive
+        world.tags[id] = {}
+
+        return entity
     }
 
-    // Add the requested tags.
-    for tag in tags {
-        add_tag(world, entity, tag)
+    // Create a completely new entity ID.
+    entity = world.next_entity
+    world.next_entity += 1
+
+    id := int(entity)
+
+    // We have exhausted the current storage.
+    if id >= world.entity_capacity {
+        grow_entity_storage(world)
     }
+
+    world.entity_state[id] = .Alive
+    world.tags[id] = {}
 
     return entity
 }
@@ -27,244 +86,76 @@ create_entity :: proc(world: ^World, tags: ..Tag) -> Entity {
 destroy_entity :: proc(world: ^World, entity: Entity) {
     id := int(entity)
 
-    assert(id >= 0 && id < len(world.entity_state), "Invalid entity ID")
-    assert(world.entity_state[id] == Entity_State.Alive, "Entity is already dead")
+    assert(
+        id >= 0 && id < len(world.entity_state),
+        "Invalid entity ID",
+    )
 
-    // Remove the entity from every tag set.
-    for tag in Tag {
-        remove_tag(world, entity, tag)
-    }
+    assert(
+        world.entity_state[id] == .Alive,
+        "Entity is already dead",
+    )
 
-    // Component removal will be added here once component
-    // sparse sets are implemented.
+    // Mark entity as dead.
+    world.entity_state[id] = .Dead
+
+    // Remove every tag from this entity.
+    world.tags[id] = {}
+
+    // Component data is intentionally left alone.
     //
-    // remove_position(world, entity)
-    // remove_rotation(world, entity)
-    // remove_velocity(world, entity)
-
-    // The entity is now completely removed from the ECS.
-    world.entity_state[id] = Entity_State.Dead
+    // The component slots are simply unused while this
+    // entity ID is dead. If the ID is reused later,
+    // whatever components the new entity uses will
+    // overwrite those slots.
 
     // Make the ID available for reuse.
     append(&world.free_entities, entity)
 }
 
 
-is_alive :: proc(world: ^World, entity: Entity) -> bool {
+add_tag :: proc(world: ^World, entity: Entity, tag: Tag) {
+    id := int(entity)
+
+    assert(
+        id >= 0 && id < len(world.entity_state),
+        "Invalid entity ID",
+    )
+
+    assert(
+        world.entity_state[id] == .Alive,
+        "Entity is dead",
+    )
+
+    world.tags[id] += {tag}
+}
+
+remove_tag :: proc(world: ^World, entity: Entity, tag: Tag) {
+    id := int(entity)
+
+    assert(
+        id >= 0 && id < len(world.entity_state),
+        "Invalid entity ID",
+    )
+
+    assert(
+        world.entity_state[id] == .Alive,
+        "Entity is dead",
+    )
+
+    world.tags[id] -= {tag}
+}
+
+has_tag :: proc(world: ^World, entity: Entity, tag: Tag) -> bool {
     id := int(entity)
 
     if id < 0 || id >= len(world.entity_state) {
         return false
     }
 
-    return world.entity_state[id] == .Alive
-}
-
-add_tag :: proc(world: ^World, entity: Entity, tag: Tag) {
-
-    entity_index := int(entity)
-    tag_set := &world.tags[tag]
-
-    assert( entity_index >= 0 && entity_index < len(world.entity_state), "Invalid entity", )
-    assert( world.entity_state[entity_index] == .Alive, "Cannot add tag to dead entity", )
-
-    // Make sure the sparse array can be indexed by this entity.
-    if entity_index >= len(tag_set.sparse) {
-        old_length := len(tag_set.sparse)
-        resize(&tag_set.sparse, entity_index + 1)
-
-        // -1 means the entity is not in this set.
-        for i in old_length ..< len(tag_set.sparse) {
-            tag_set.sparse[i] = -1
-        }
-    }
-
-    // Already has this tag.
-    if tag_set.sparse[entity_index] != -1 {
-        return
-    }
-
-    dense_index := len(tag_set.dense)
-    append(&tag_set.dense, entity)
-    tag_set.sparse[entity_index] = dense_index
-}
-
-has_tag :: proc(world: ^World, entity: Entity, tag: Tag) -> bool {
-    entity_index := int(entity)
-    tag_set := &world.tags[tag]
-
-    if entity_index < 0 || entity_index >= len(tag_set.sparse) {
+    if world.entity_state[id] != .Alive {
         return false
     }
 
-    dense_index := tag_set.sparse[entity_index]
-
-    if dense_index == -1 {
-        return false
-    }
-
-    return tag_set.dense[dense_index] == entity
-}
-
-remove_tag :: proc(world: ^World, entity: Entity, tag: Tag) {
-    entity_index := int(entity)
-    tag_set := &world.tags[tag]
-
-    if entity_index < 0 || entity_index >= len(tag_set.sparse) {
-        return
-    }
-
-    dense_index := tag_set.sparse[entity_index]
-
-    if dense_index == -1 {
-        return
-    }
-
-    // Entity being removed.
-    assert(tag_set.dense[dense_index] == entity)
-
-    // Get the last entity in the dense array.
-    last_index := len(tag_set.dense) - 1
-    last_entity := tag_set.dense[last_index]
-
-    // If we're not removing the last element,
-    // move the last entity into the removed slot.
-    if dense_index != last_index {
-        tag_set.dense[dense_index] = last_entity
-
-        // Update the moved entity's sparse index.
-        tag_set.sparse[int(last_entity)] = dense_index
-    }
-
-    // Remove the final dense element.
-    pop(&tag_set.dense)
-
-    // Mark the removed entity as absent.
-    tag_set.sparse[entity_index] = -1
-}
-
-
-add_component :: proc(
-    storage: ^Component_Set($T),
-    entity: Entity,
-    component: T,
-) {
-    entity_index := int(entity)
-
-    assert(entity_index >= 0, "Invalid entity")
-
-    // Make sure the sparse array can represent this entity.
-    if entity_index >= len(storage.sparse) {
-        old_length := len(storage.sparse)
-
-        resize(&storage.sparse, entity_index + 1)
-
-        // -1 means the entity does not have this component.
-        for i in old_length ..< len(storage.sparse) {
-            storage.sparse[i] = -1
-        }
-    }
-
-    // Entity already has this component.
-    if storage.sparse[entity_index] != -1 {
-        dense_index := storage.sparse[entity_index]
-
-        // Replace the existing component.
-        storage.data[dense_index] = component
-
-        return
-    }
-
-    // Add new component.
-    dense_index := len(storage.dense)
-
-    append(&storage.dense, entity)
-    append(&storage.data, component)
-
-    storage.sparse[entity_index] = dense_index
-}
-
-
-has_component :: proc(
-    storage: ^Component_Set($T),
-    entity: Entity,
-) -> bool {
-    entity_index := int(entity)
-
-    if entity_index < 0 || entity_index >= len(storage.sparse) {
-        return false
-    }
-
-    dense_index := storage.sparse[entity_index]
-
-    if dense_index < 0 || dense_index >= len(storage.dense) {
-        return false
-    }
-
-    return storage.dense[dense_index] == entity
-}
-
-
-get_component :: proc(
-    storage: ^Component_Set($T),
-    entity: Entity,
-) -> ^T {
-    entity_index := int(entity)
-
-    assert(
-        entity_index >= 0 &&
-        entity_index < len(storage.sparse),
-        "Entity does not have this component",
-    )
-
-    dense_index := storage.sparse[entity_index]
-
-    assert(
-        dense_index >= 0 &&
-        dense_index < len(storage.dense),
-        "Entity does not have this component",
-    )
-
-    assert(
-        storage.dense[dense_index] == entity,
-        "Entity does not have this component",
-    )
-
-    return &storage.data[dense_index]
-}
-
-
-remove_component :: proc(
-    storage: ^Component_Set($T),
-    entity: Entity,
-) {
-    entity_index := int(entity)
-
-    if entity_index < 0 || entity_index >= len(storage.sparse) {
-        return
-    }
-
-    dense_index := storage.sparse[entity_index]
-
-    if dense_index < 0 {
-        return
-    }
-
-    assert(storage.dense[dense_index] == entity)
-
-    last_index := len(storage.dense) - 1
-
-    if dense_index != last_index {
-        last_entity := storage.dense[last_index]
-
-        storage.dense[dense_index] = last_entity
-        storage.data[dense_index] = storage.data[last_index]
-
-        storage.sparse[int(last_entity)] = dense_index
-    }
-
-    pop(&storage.dense)
-    pop(&storage.data)
-
-    storage.sparse[entity_index] = -1
+    return tag in world.tags[id]
 }

@@ -19,24 +19,12 @@ main :: proc() {
     rl.DisableCursor()
     defer rl.CloseWindow()
 
-    world := ecs.World{}
-    ecs.create_entity(&world, .Object)
 
-    player := ecs.create_entity( &world, .Player, .Human, .Object, )
-    fmt.println("Player Entity :", player)
-
-    ecs.add_component( &world.positions, player, ecs.Position{ x = 10, y = 20, z = 30, }, )
-
-    ecs.add_component( &world.velocities, player, ecs.Velocity{ x = 1, y = 2, z = 3, }, )
-
-    fmt.println("Player :", ecs.has_component(&world.positions, player))
-    fmt.println("Player :", ecs.has_component(&world.velocities, player))
-
-    player_position := ecs.get_component( &world.positions, player, )
-    player_position.x += 100
-    fmt.println(player_position^)
-    ecs.remove_component( &world.velocities, player, )
-
+    // ecs Ini
+    ENTITY_COUNT :: 1_000_000
+    world := ecs.create_world(ENTITY_COUNT)
+    defer ecs.destroy_world(&world)
+    fmt.println("ECS World created.")
 
     //Box3D PhysWorld Ini
     physics_world := physics.CreateWorld()
