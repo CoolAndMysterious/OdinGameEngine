@@ -25,6 +25,7 @@ main :: proc() {
     world := ecs.create_world(ENTITY_COUNT)
     defer ecs.destroy_world(&world)
     fmt.println("ECS World created.")
+    ecs.save_world(&world)
 
     //Box3D PhysWorld Ini
     physics_world := physics.CreateWorld()

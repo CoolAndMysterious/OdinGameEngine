@@ -5,6 +5,7 @@ import "core:os"
 
 
 SAVE_VERSION :: 1
+path := "saves/"
 
 
 Save_State :: struct {
@@ -28,7 +29,7 @@ Save_State :: struct {
 }
 
 
-save_world :: proc(world: ^World, path: string) -> bool {
+save_world :: proc(world: ^World) -> bool {
 
     save := Save_State{
         version         = SAVE_VERSION,
@@ -106,7 +107,7 @@ save_world :: proc(world: ^World, path: string) -> bool {
 }
 
 
-load_world :: proc(path: string) -> (World, bool) {
+load_world :: proc() -> (World, bool) {
 
     world := World{}
 
