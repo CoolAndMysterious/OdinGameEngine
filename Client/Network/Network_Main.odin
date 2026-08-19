@@ -58,9 +58,6 @@ network_update :: proc() {
                 fmt.println("Received packet!")
 
                 packet := event.packet
-
-                data := cast(^ecs.EntityPacket)event.packet.data
-
                 ENet.packet_destroy(event.packet)
 
             case .DISCONNECT:

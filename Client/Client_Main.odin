@@ -21,16 +21,16 @@ main :: proc() {
     defer rl.CloseWindow()
 
     //ECS Ini
-    world := Flecs.ecs_init()
-    defer Flecs.ecs_fini(world)
-    registry := ecs.ECS_Registry{
-        components = ecs.Register_ECS_Components(world),
-        tags       = ecs.Register_ECS_Tags(world)
-    }
+    world := ecs.Create_World()
+    defer ecs.Destroy_World(world)
 
-    //Flecs.ecs_world_from_json_file( world, "saves/world.json", nil)
-    player := ecs.Create_Player(world, registry, 1)
-    ecs.Save_World(world)
+    myen := ecs.Create_Entity(world)
+    fmt.println(myen)
+    fmt.println("created an entity")
+
+    fmt.println(world.entity_index.alive_count)
+    fmt.println(len(world.entity_index.dense))
+
 
     //Box3D PhysWorld Ini
     physics_world := physics.CreateWorld()
