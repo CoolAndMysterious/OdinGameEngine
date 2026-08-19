@@ -1,0 +1,171 @@
+# 🏺 odecs 🏺
+
+A minimal, data-oriented, high-performance Entity Component System written in [Odin](https://odin-lang.org/). Architecture directly inspired by [Flecs](https://github.com/SanderMertens/flecs) (C). Shares the same minimal design philosophy and near-identical API as sibling library [bitECS](https://github.com/NateTheGreatt/bitecs) (TypeScript).
+
+Can almost be pronounced like Odysseus.
+
+## Features
+
+|                     |                     |
+|----------------------------|----------------------------|
+| 🔮 Simple, declarative API | 🔍 Powerful querying       |
+| 🧩 Archetypes              | 🔗 Relationships           |
+| 👀 Observers               | 🏛️ Hierarchies             |
+
+### Roadmap
+
+- [ ] onSet observer
+- [ ] Prefabs
+
+## Quick Start
+
+```odin
+import ecs "odecs/src"
+
+Position :: struct { x, y: f32 }
+Velocity :: struct { vx, vy: f32 }
+
+main :: proc() {
+    using ecs
+
+    world := create_world()
+    defer delete_world(world)
+
+    player := add_entity(world, Position{0, 0}, Velocity{1, 1})
+
+    for arch in query(world, {Position, Velocity}) {
+        positions := get_table(world, arch, Position)
+        velocities := get_table(world, arch, Velocity)
+
+        for i in 0..<len(arch.entities) {
+            positions[i].x += velocities[i].vx
+            positions[i].y += velocities[i].vy
+        }
+    }
+}
+```
+
+## Queries
+
+| Require | Boolean | Set Theory |
+|---------|---------|------------|
+| ALL of  | `and`   | `all`      |
+| SOME of | `or`    | `some`     |
+| NONE of | `not`   | `none`     |
+
+```odin
+using ecs
+
+query(world, {all(Position, Velocity)}) // same as {Position, Velocity} - and/all is default
+query(world, {or(Player, Enemy)})
+query(world, {not(Dead, Disabled)})
+query(world, {all(Position), not(Dead)})
+query(world, {all(Position), or(Player, Enemy), none(Dead)})
+```
+
+## Relationships
+
+```odin
+using ecs
+
+ChildOf :: distinct struct {}
+add_component(world, ChildOf, Exclusive)  // only one parent allowed
+add_component(world, ChildOf, Cascade)    // delete children when parent deleted
+
+parent := add_entity(world)
+child := add_entity(world, pair(ChildOf, parent))  // inline with entity creation
+
+// alternative ways to add pairs
+add_component(world, child, pair(ChildOf, parent))
+add_pair(world, child, ChildOf, parent)
+
+// Exclusive: adding new parent auto-removes old one
+new_parent := add_entity(world)
+add_pair(world, child, ChildOf, new_parent)  // (ChildOf, parent) removed
+
+// Cascade: deleting parent deletes children
+remove_entity(world, new_parent)  // child also deleted
+
+// pairs can carry data - reads like: "chest Contains 50 gold"
+Contains :: struct { amount: int }
+gold := add_entity(world)
+chest := add_entity(world)
+add_pair(world, chest, Contains{50}, gold)
+
+query(world, {pair(ChildOf, Wildcard)})  // all children
+query(world, {pair(Contains, gold)})     // everything containing gold
+```
+
+## Observers
+
+```odin
+using ecs
+
+Dead :: distinct struct {}
+
+on_death :: proc(world: ^World, entity: EntityID) {
+    fmt.println("Entity died:", entity)
+}
+
+obs := observe(world, on_add(Dead), on_death)
+defer unobserve(world, obs)
+
+add_component(world, player, Dead{})  // triggers observer
+```
+
+## Benchmarks
+
+![odecs benchmarks](benchmarks/bench.svg)
+
+## API
+
+```odin
+// World
+create_world :: proc(allocator := context.allocator, cache_allocator := context.allocator) -> ^World
+delete_world :: proc(world: ^World)
+
+// Entities
+add_entity :: proc(world: ^World, components: ..any) -> EntityID
+remove_entity :: proc(world: ^World, entity: EntityID)
+entity_alive :: proc(world: ^World, entity: EntityID) -> bool
+
+// Components
+add_component :: proc(world: ^World, entity: EntityID, component: $T)
+add_component :: proc(world: ^World, $Type: typeid, component: $T)  // attach to type
+add_component :: proc(world: ^World, $Type: typeid, $Tag: typeid)   // attach tag to type
+add_components :: proc(world: ^World, entity: EntityID, components: ..any)
+remove_component :: proc(world: ^World, entity: EntityID, $T: typeid)
+get_component :: proc(world: ^World, entity: EntityID, $T: typeid) -> ^T
+has_component :: proc(world: ^World, entity: EntityID, $T: typeid) -> bool
+
+// Relation Traits (attach to relation types)
+Exclusive :: struct {}  // entity can have only one target per relation
+Cascade :: struct {}    // delete entity when its target is deleted
+
+// Queries - one-line iteration with automatic deferred cleanup
+query :: proc(world: ^World, types: []typeid) -> Query  // @(deferred_in) handles cleanup
+get_table :: proc(world: ^World, arch: ^Archetype, $T: typeid) -> []T
+get_entities :: proc(arch: ^Archetype) -> []EntityID
+
+// Terms - encode into typeids, mix freely with plain types in query {..}
+and, all   :: proc(..typeid) -> typeid  // require ALL
+or, some   :: proc(..typeid) -> typeid  // require SOME
+not, none  :: proc(..typeid) -> typeid  // require NONE
+pair       :: proc(Relation, Target) -> typeid
+hierarchy  :: proc($R: typeid) -> typeid  // depth-ordered iteration
+
+// Pairs - "entity Relation target"
+add_pair :: proc(world: ^World, entity: EntityID, $R: typeid, target: EntityID)  // tag
+add_pair :: proc(world: ^World, entity: EntityID, data: $R, target: EntityID)    // data
+has_pair :: proc(world: ^World, entity: EntityID, $R, $T: typeid) -> bool
+get_pair :: proc(world: ^World, entity: EntityID, $R, $T: typeid) -> ^R
+
+// Observers
+observe :: proc(world: ^World, def: Observer_Def, callback: proc(^World, EntityID)) -> ObserverID
+unobserve :: proc(world: ^World, id: ObserverID)
+on_add, on_remove :: proc(types: ..typeid) -> Observer_Def
+```
+
+## License
+
+MIT
