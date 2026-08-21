@@ -1,6 +1,5 @@
 package ECS
-
-World :: struct {
+ECS_World :: struct {
 
     entity_state: [dynamic]Entity_State,
     free_entities: [dynamic]Entity,

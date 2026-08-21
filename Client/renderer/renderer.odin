@@ -4,6 +4,7 @@ package renderer
 import "core:fmt"
 import rl "vendor:raylib"
 import physics "../Physics"
+import ecs "../ECS"
 
 
 camera := rl.Camera3D{
@@ -15,7 +16,7 @@ camera := rl.Camera3D{
 }
 
 
-RLrender :: proc(cube: ^physics.Cube) {
+RLrender :: proc(ray_mesh: ^ecs.Raylib_Mesh, material: rl.Material) {
 
     rl.BeginDrawing()
     
@@ -28,14 +29,14 @@ RLrender :: proc(cube: ^physics.Cube) {
     //rl.DrawCubeWires({ 0.0, 0.5, 0.0 }, 1.0, 1.0, 1.0, rl.BLACK)   
     rl.DrawGrid(20, 1.0)
 
+    rl.DrawMesh(
+        ray_mesh.mesh,
+        material,
+        rl.Matrix(1),
+    )
 
-    physics.DrawCube(cube)   
-
-   
 
     rl.EndMode3D()
-
     rl.DrawFPS(10, 10)
-
     rl.EndDrawing()
 }
