@@ -16,7 +16,7 @@ camera := rl.Camera3D{
 }
 
 
-RLrender :: proc(ray_mesh: ^ecs.Raylib_Mesh, material: rl.Material) {
+RLrender :: proc() {
 
     rl.BeginDrawing()
     
@@ -29,11 +29,6 @@ RLrender :: proc(ray_mesh: ^ecs.Raylib_Mesh, material: rl.Material) {
     //rl.DrawCubeWires({ 0.0, 0.5, 0.0 }, 1.0, 1.0, 1.0, rl.BLACK)   
     rl.DrawGrid(20, 1.0)
 
-    rl.DrawMesh(
-        ray_mesh.mesh,
-        material,
-        rl.Matrix(1),
-    )
 
 
     rl.EndMode3D()

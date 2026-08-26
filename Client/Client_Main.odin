@@ -19,12 +19,16 @@ main :: proc() {
     rl.DisableCursor()
     defer rl.CloseWindow()
 
+    //gridworld := ecs.create_world_grid()
+    gridworld, success:= ecs.load_grid_world()
+    if !success {
+        fmt.println("Failed to load grid world, creating new world.")
+        gridworld = ecs.create_world_grid()
+    }
 
-    grid := ecs.create_grid_3d(64)
-    ecs.fill_test_cube(&grid)
-    surface_mesh := ecs.generate_surface_nets(&grid)
-    ray_mesh := ecs.surface_nets_to_raylib_mesh(&surface_mesh)
-    rl.UploadMesh(&ray_mesh.mesh, false)
+    for coord, chunk in gridworld.chunks {
+        fmt.println("Chunk:", coord)
+    }
 
     material := rl.LoadMaterialDefault()
 
@@ -34,6 +38,8 @@ main :: proc() {
     for !rl.WindowShouldClose(){
 
 
-        r.RLrender(&ray_mesh, material)
+        r.RLrender()
     }
+
+    ecs.save_grid_world(gridworld)
 }
