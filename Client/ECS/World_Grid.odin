@@ -1,16 +1,35 @@
 package ECS
 
-CHUNK_SIZE       :: 64
-CHUNK_CELL_COUNT :: CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE
+WORLD_REGION_SIZE :: 8192
+WORLD_GRID_MAX_DEPTH :: 20
+WORLD_GRID_CHILD_COUNT :: 8
+WORLD_GRID_MIN_RESOLUTION :: 0.01
 
+World_Grid :: struct {
+    origin: [3]int,
+    tree: World_Grid_Tree,
+}
 
-WORLD_SIZE :: 8192
-WORLD_CHUNKS_PER_AXIS :: WORLD_SIZE / CHUNK_SIZE
+World_Grid_Tree :: struct {
+    root: World_Grid_Node,
+}
 
-WORLD_MIN_CHUNK :: -(WORLD_CHUNKS_PER_AXIS / 2)
-WORLD_MAX_CHUNK ::  (WORLD_CHUNKS_PER_AXIS / 2) - 1
+World_Grid_Node :: struct {
+    state: World_Grid_Node_State,
+    value: World_Grid_Value,
+    children: [dynamic]World_Grid_Node,
+}
 
-Chunk_Coord :: [3]int
+World_Grid_Node_State :: enum u8 {
+    Uniform,
+    Mixed,
+    Leaf,
+}
+
+World_Grid_Value :: struct {
+    density: f32,
+    material: Material,
+}
 
 
 Material :: enum u8 {
@@ -19,17 +38,4 @@ Material :: enum u8 {
     Rock,
     Mud,
     Sand,
-}
-
-
-Chunk :: struct {
-    density:  [dynamic]f16,
-    material: [dynamic]Material,
-
-    active: bool,
-}
-
-
-World_Grid :: struct {
-    chunks: map[Chunk_Coord]Chunk,
 }

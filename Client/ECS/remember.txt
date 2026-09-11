@@ -2,29 +2,21 @@ package ECS
 
 import "core:math"
 
-create_world_grid :: proc(origin: [3]int) -> World_Grid {
-    world := World_Grid{
-        origin = origin,
-    }
 
-    world.tree.root = World_Grid_Node{
-        state = .Uniform,
-
-        value = World_Grid_Value{
-            density = 0,
-            material = .Air,
-        },
-    }
-
-    return world
-}
-
+// ============================================================
 // ADD SPHERE TERRAIN
+// ============================================================
 
-add_sphere_terrain :: proc( world: ^World_Grid, position: [3]f64, radius: f64, value: World_Grid_Value, ) {
+add_sphere_terrain :: proc(
+    world: ^World_Grid,
+    position: [3]f64,
+    radius: f64,
+    value: World_Grid_Value,
+) {
     if radius <= 0 {
         return
     }
+
     // The position is already in the coordinate space
     // used by this region's octree.
     add_sphere_to_node(
@@ -38,7 +30,10 @@ add_sphere_terrain :: proc( world: ^World_Grid, position: [3]f64, radius: f64, v
     )
 }
 
+
+// ============================================================
 // RECURSIVE SPHERE EDIT
+// ============================================================
 
 add_sphere_to_node :: proc(
     node: ^World_Grid_Node,
@@ -50,20 +45,30 @@ add_sphere_to_node :: proc(
     half_size: f64,
 ) {
     // The sphere does not touch this node at all.
-    if !sphere_intersects_box( sphere_center, radius, node_center, half_size, ) {
+    if !sphere_intersects_box(
+        sphere_center,
+        radius,
+        node_center,
+        half_size,
+    ) {
         return
     }
 
     // The sphere completely covers this node.
     // The entire node can therefore become uniform.
-    if sphere_contains_box( sphere_center, radius, node_center, half_size, ) {
+    if sphere_contains_box(
+        sphere_center,
+        radius,
+        node_center,
+        half_size,
+    ) {
         set_node_uniform(node, value)
         return
     }
 
     // We reached the smallest possible node.
-    if depth >= WORLD_GRID_MAX_DEPTH { 
-        set_node_leaf(node, value) 
+    if depth >= WORLD_GRID_MAX_DEPTH {
+        set_node_leaf(node, value)
         return
     }
 
@@ -75,9 +80,21 @@ add_sphere_to_node :: proc(
     child_half_size := half_size * 0.5
 
     for i in 0..<WORLD_GRID_CHILD_COUNT {
-        child_center := child_node_center( node_center, child_half_size, i)
+        child_center := child_node_center(
+            node_center,
+            child_half_size,
+            i,
+        )
 
-        add_sphere_to_node( &node.children[i], sphere_center, radius, value, depth + 1, child_center, child_half_size, )
+        add_sphere_to_node(
+            &node.children[i],
+            sphere_center,
+            radius,
+            value,
+            depth + 1,
+            child_center,
+            child_half_size,
+        )
     }
 
     // If all children became identical, the subdivision
@@ -85,9 +102,14 @@ add_sphere_to_node :: proc(
     collapse_node_if_uniform(node)
 }
 
-// SUBDIVIDE NODE
 
-subdivide_node :: proc( node: ^World_Grid_Node, ) {
+// ============================================================
+// SUBDIVIDE NODE
+// ============================================================
+
+subdivide_node :: proc(
+    node: ^World_Grid_Node,
+) {
     if node.state == .Leaf {
         return
     }
@@ -96,7 +118,10 @@ subdivide_node :: proc( node: ^World_Grid_Node, ) {
         return
     }
 
-    node.children = make( [dynamic]World_Grid_Node, WORLD_GRID_CHILD_COUNT, )
+    node.children = make(
+        [dynamic]World_Grid_Node,
+        WORLD_GRID_CHILD_COUNT,
+    )
 
     // Every child initially contains the same value
     // as its parent.
@@ -110,9 +135,15 @@ subdivide_node :: proc( node: ^World_Grid_Node, ) {
     node.state = .Mixed
 }
 
-// SET UNIFORM
 
-set_node_uniform :: proc( node: ^World_Grid_Node, value: World_Grid_Value, ) {
+// ============================================================
+// SET UNIFORM
+// ============================================================
+
+set_node_uniform :: proc(
+    node: ^World_Grid_Node,
+    value: World_Grid_Value,
+) {
     delete_node_children(node)
 
     node.state = .Uniform
@@ -120,11 +151,14 @@ set_node_uniform :: proc( node: ^World_Grid_Node, value: World_Grid_Value, ) {
 }
 
 
-
+// ============================================================
 // SET LEAF
+// ============================================================
 
-
-set_node_leaf :: proc( node: ^World_Grid_Node, value: World_Grid_Value, ) {
+set_node_leaf :: proc(
+    node: ^World_Grid_Node,
+    value: World_Grid_Value,
+) {
     delete_node_children(node)
 
     node.state = .Leaf
@@ -132,11 +166,13 @@ set_node_leaf :: proc( node: ^World_Grid_Node, value: World_Grid_Value, ) {
 }
 
 
-
+// ============================================================
 // COLLAPSE NODE
+// ============================================================
 
-
-collapse_node_if_uniform :: proc( node: ^World_Grid_Node, ) {
+collapse_node_if_uniform :: proc(
+    node: ^World_Grid_Node,
+) {
     if len(node.children) != WORLD_GRID_CHILD_COUNT {
         return
     }
@@ -169,20 +205,28 @@ collapse_node_if_uniform :: proc( node: ^World_Grid_Node, ) {
 }
 
 
-
+// ============================================================
 // VALUE COMPARISON
+// ============================================================
 
-
-world_grid_values_equal :: proc( a: World_Grid_Value, b: World_Grid_Value, ) -> bool {
-    return a.density == b.density && a.material == b.material
+world_grid_values_equal :: proc(
+    a: World_Grid_Value,
+    b: World_Grid_Value,
+) -> bool {
+    return a.density == b.density &&
+           a.material == b.material
 }
 
 
-
+// ============================================================
 // CHILD CENTER
+// ============================================================
 
-
-child_node_center :: proc( parent_center: [3]f64, child_half_size: f64, child_index: int, ) -> [3]f64 {
+child_node_center :: proc(
+    parent_center: [3]f64,
+    child_half_size: f64,
+    child_index: int,
+) -> [3]f64 {
     center := parent_center
 
     if (child_index & 1) != 0 {
@@ -206,9 +250,17 @@ child_node_center :: proc( parent_center: [3]f64, child_half_size: f64, child_in
     return center
 }
 
-// SPHERE / BOX INTERSECTION
 
-sphere_intersects_box :: proc( sphere_center: [3]f64, radius: f64, box_center: [3]f64, half_size: f64, ) -> bool {
+// ============================================================
+// SPHERE / BOX INTERSECTION
+// ============================================================
+
+sphere_intersects_box :: proc(
+    sphere_center: [3]f64,
+    radius: f64,
+    box_center: [3]f64,
+    half_size: f64,
+) -> bool {
     dx := abs_f64(sphere_center[0] - box_center[0])
     dy := abs_f64(sphere_center[1] - box_center[1])
     dz := abs_f64(sphere_center[2] - box_center[2])
@@ -217,43 +269,63 @@ sphere_intersects_box :: proc( sphere_center: [3]f64, radius: f64, box_center: [
     closest_y := max_f64(dy - half_size, 0)
     closest_z := max_f64(dz - half_size, 0)
 
-    distance_squared := closest_x * closest_x + closest_y * closest_y + closest_z * closest_z
+    distance_squared :=
+        closest_x * closest_x +
+        closest_y * closest_y +
+        closest_z * closest_z
+
     return distance_squared <= radius * radius
 }
 
 
-
+// ============================================================
 // SPHERE / BOX CONTAINMENT
+// ============================================================
 
-
-sphere_contains_box :: proc( sphere_center: [3]f64, radius: f64, box_center: [3]f64, half_size: f64, ) -> bool {
+sphere_contains_box :: proc(
+    sphere_center: [3]f64,
+    radius: f64,
+    box_center: [3]f64,
+    half_size: f64,
+) -> bool {
     dx := abs_f64(sphere_center[0] - box_center[0]) + half_size
     dy := abs_f64(sphere_center[1] - box_center[1]) + half_size
     dz := abs_f64(sphere_center[2] - box_center[2]) + half_size
 
-    distance_squared := dx * dx + dy * dy + dz * dz
+    distance_squared :=
+        dx * dx +
+        dy * dy +
+        dz * dz
 
     return distance_squared <= radius * radius
 }
 
 
-
+// ============================================================
 // MATH HELPERS
+// ============================================================
 
 abs_f64 :: proc(x: f64) -> f64 {
     return math.abs(x)
 }
+
+
 max_f64 :: proc(a, b: f64) -> f64 {
     if a > b {
         return a
     }
+
     return b
 }
 
+
+// ============================================================
 // DELETE CHILDREN
+// ============================================================
 
-
-delete_node_children :: proc( node: ^World_Grid_Node, ) {
+delete_node_children :: proc(
+    node: ^World_Grid_Node,
+) {
     for i := 0; i < len(node.children); i += 1 {
         delete_node_children(&node.children[i])
     }

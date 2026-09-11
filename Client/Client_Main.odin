@@ -19,16 +19,9 @@ main :: proc() {
     rl.DisableCursor()
     defer rl.CloseWindow()
 
-    //gridworld := ecs.create_world_grid()
-    gridworld, success:= ecs.load_grid_world()
-    if !success {
-        fmt.println("Failed to load grid world, creating new world.")
-        gridworld = ecs.create_world_grid()
-    }
+    grid := ecs.create_world_grid({0, 0, 0})
 
-    for coord, chunk in gridworld.chunks {
-        fmt.println("Chunk:", coord)
-    }
+    ecs.add_sphere_terrain(&grid, {0, 0, 0}, 10, ecs.World_Grid_Value{density = 1.0, material = .Dirt})
 
     material := rl.LoadMaterialDefault()
 
@@ -40,6 +33,4 @@ main :: proc() {
 
         r.RLrender()
     }
-
-    ecs.save_grid_world(gridworld)
 }
