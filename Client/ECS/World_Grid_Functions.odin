@@ -1,6 +1,5 @@
 package ECS
 
-
 create_world_grid :: proc() -> ^World_Grid {
     world := new(World_Grid)
 
@@ -19,7 +18,6 @@ create_chunk :: proc() -> Chunk {
 
     return chunk
 }
-
 
 chunk_coord_is_valid :: proc(coord: Chunk_Coord) -> bool {
     return (
